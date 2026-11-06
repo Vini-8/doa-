@@ -3,11 +3,42 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Doa+ - login</title>
+  <title>Doa+ - Login</title>
   <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
-  <!-- Página "login": será construída nas próximas entregas -->
+  <header><strong>Doa+</strong><nav><a href="cadastro.html">Cadastrar</a></nav></header>
+  <main>
+    <div class="card estreito">
+      <h2>Entrar</h2>
+      <form id="form-login">
+        <label for="email">Email</label>
+        <input id="email" type="email" required>
+        <label for="senha">Senha</label>
+        <input id="senha" type="password" required>
+        <button type="submit">Entrar</button>
+      </form>
+      <div id="msg" class="msg"></div>
+    </div>
+  </main>
   <script src="../js/api.js"></script>
+  <script>
+    document.getElementById('form-login').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        const dados = await requisicao('/auth/login', {
+          method: 'POST',
+          body: JSON.stringify({
+            email: document.getElementById('email').value,
+            senha: document.getElementById('senha').value
+          })
+        });
+        salvarSessao(dados.token, dados.usuario);
+        window.location.href = '/pages/dashboard.html';
+      } catch (erro) {
+        mostrarMensagem(document.getElementById('msg'), erro.message, 'erro');
+      }
+    });
+  </script>
 </body>
 </html>

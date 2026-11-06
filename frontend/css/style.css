@@ -1,1 +1,19 @@
-/* Estilos globais do Doa+ (Entrega 3) */
+:root { --verde:#2e7d32; --verde-escuro:#1b5e20; --cinza:#f4f6f4; --texto:#222; --erro:#c62828; }
+* { box-sizing: border-box; }
+body { margin:0; font-family: system-ui, sans-serif; background:var(--cinza); color:var(--texto); }
+header { background:var(--verde); color:#fff; padding:14px 24px; display:flex; justify-content:space-between; align-items:center; }
+header a { color:#fff; margin-left:16px; text-decoration:none; }
+main { max-width:900px; margin:32px auto; padding:0 16px; }
+.card { background:#fff; border-radius:10px; padding:24px; box-shadow:0 1px 4px rgba(0,0,0,.12); margin-bottom:24px; }
+.card.estreito { max-width:420px; margin:48px auto; }
+label { display:block; margin:12px 0 4px; font-weight:600; }
+input, select { width:100%; padding:10px; border:1px solid #bbb; border-radius:6px; font-size:1rem; }
+button { background:var(--verde); color:#fff; border:0; padding:10px 18px; border-radius:6px; font-size:1rem; cursor:pointer; margin-top:16px; }
+button:hover { background:var(--verde-escuro); }
+button.secundario { background:#757575; margin:0; padding:6px 12px; font-size:.85rem; }
+.msg { margin-top:12px; padding:10px; border-radius:6px; display:none; }
+.msg.erro { background:#fdecea; color:var(--erro); display:block; }
+.msg.ok { background:#e8f5e9; color:var(--verde-escuro); display:block; }
+table { width:100%; border-collapse:collapse; }
+th, td { text-align:left; padding:8px; border-bottom:1px solid #e0e0e0; }
+.hero { text-align:center; padding:48px 16px; }

@@ -3,7 +3,7 @@
 Sistema web que conecta **doadores de alimentos** (mercados, padarias, restaurantes e pessoas físicas) a **instituições que atendem pessoas em situação de vulnerabilidade** (bancos de alimentos, abrigos, ONGs, cozinhas comunitárias).
 
 > Projeto Web — desenvolvido em 4 entregas progressivas neste único repositório.
-> **Situação atual: Entrega 1 — Problema e estrutura inicial.**
+> **Situação atual: Entrega 2 — Banco de dados e autenticação.**
 
 ---
 
@@ -83,8 +83,8 @@ Cadastro → Login (JWT) → Doador publica → Instituição reserva → Retira
 
 - **Front-end:** HTML, CSS e JavaScript (DOM + Fetch)
 - **Back-end:** Node.js e Express
-- **Banco de dados:** MySQL
-- **Autenticação:** JWT e criptografia de senha (bcrypt)
+- **Banco de dados:** MySQL (driver `mysql2`)
+- **Autenticação:** JWT (`jsonwebtoken`) e criptografia de senha (`bcryptjs`)
 - **Versionamento:** Git e GitHub
 
 ## 6. Estrutura do projeto
@@ -96,28 +96,78 @@ doamais/
 │   │   ├── routes/         # Define os endpoints
 │   │   ├── controllers/    # Regras de negócio e respostas
 │   │   ├── middlewares/    # Autenticação, autorização e erros
-│   │   ├── database/       # Conexão com o MySQL
+│   │   ├── database/       # Conexão com o MySQL e seed do admin
 │   │   ├── app.js
 │   │   └── server.js
 │   ├── .env.example
 │   └── package.json
 ├── frontend/
 │   ├── css/
-│   ├── js/
-│   └── pages/
-├── sql/                    # Scripts do banco (Entrega 2)
-├── docs/
+│   ├── js/                 # api.js: Fetch e sessão
+│   └── pages/              # index, cadastro, login, dashboard
+├── sql/
+│   └── schema.sql          # Script do banco
+├── docs/                   # Modelo do banco e testes da API
 ├── .gitignore
 └── README.md
 ```
 
-## 7. Cronograma das entregas
+## 7. Banco de dados
+
+Tabelas: `perfis`, `usuarios`, `categorias`, `doacoes` e `reservas`, com chaves primárias, chaves estrangeiras, `UNIQUE` e `CHECK`. Diagrama e decisões de modelagem em [`docs/modelo-banco.md`](docs/modelo-banco.md). Script completo em [`sql/schema.sql`](sql/schema.sql).
+
+## 8. Autenticação e controle de acesso
+
+- **Senhas:** nunca salvas em texto puro; armazenadas como hash bcrypt (10 rounds).
+- **Login:** valida email e senha e devolve um token JWT (expira em 2h) com `id` e `perfil`.
+- **`authMiddleware`:** valida o token do header `Authorization: Bearer <token>` e confere no banco se o usuário continua `ativo` (um usuário bloqueado perde o acesso imediatamente, mesmo com token válido).
+- **`roleMiddleware`:** `permitir('admin')` restringe rotas por perfil, sempre verificado na API.
+- **Cadastro público:** só cria `doador` (ativo) ou `instituicao` (pendente até aprovação do admin). O perfil `admin` não pode ser criado pelo cadastro.
+
+## 9. Rotas da API (Entrega 2)
+
+| Método | Rota | Acesso | Descrição |
+|---|---|---|---|
+| POST | `/api/auth/cadastro` | Público | Cadastra doador ou instituição |
+| POST | `/api/auth/login` | Público | Autentica e retorna o token JWT |
+| GET | `/api/auth/me` | Autenticado | Dados do usuário logado |
+| GET | `/api/usuarios` | Admin | Lista usuários (filtros `?status=` e `?perfil=`) |
+| PATCH | `/api/usuarios/:id/status` | Admin | Aprova, bloqueia ou reativa um usuário |
+
+## 10. Como executar
+
+**Pré-requisitos:** Node.js 18+ e MySQL 8+.
+
+```bash
+# 1. Clonar e instalar
+git clone <url-do-repositorio>
+cd doamais/backend
+npm install
+
+# 2. Criar o banco
+mysql -u root -p < ../sql/schema.sql
+
+# 3. Configurar variáveis (copie e edite com seus dados)
+cp .env.example .env
+
+# 4. Criar o usuário administrador (usa ADMIN_* do .env)
+npm run seed:admin
+
+# 5. Iniciar o servidor
+npm start
+```
+
+Acesse **http://localhost:3000**. O próprio Express serve o front-end.
+
+## 11. Testes
+
+Cenários de teste com `curl` e checklist de resultados em [`docs/testes-api.md`](docs/testes-api.md).
+
+## 12. Cronograma das entregas
 
 | Entrega | Foco | Status |
 |---|---|---|
-| 1 | Problema, proposta e estrutura inicial | ✅ Atual |
-| 2 | Banco de dados, autenticação e JWT | ⏳ Prevista |
+| 1 | Problema, proposta e estrutura inicial | ✅ Concluída |
+| 2 | Banco de dados, autenticação e JWT | ✅ Atual |
 | 3 | CRUD, integração e permissões | ⏳ Prevista |
 | 4 | Projeto completo, documentação e apresentação | ⏳ Prevista |
-
-> Instruções de instalação, execução, rotas e testes serão adicionadas conforme o sistema evoluir.

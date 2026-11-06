@@ -1,1 +1,1 @@
-// Rotas de doacoes: apenas mapeiam endpoints para controllers (Entrega 2/3).
+// Rotas de doações: CRUD será implementado na Entrega 3.

@@ -1,1 +1,1 @@
-// Rotas de categorias: apenas mapeiam endpoints para controllers (Entrega 2/3).
+// Rotas de categorias: será implementado na Entrega 3.

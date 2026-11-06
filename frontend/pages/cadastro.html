@@ -3,11 +3,57 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Doa+ - cadastro</title>
+  <title>Doa+ - Cadastro</title>
   <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
-  <!-- Página "cadastro": será construída nas próximas entregas -->
+  <header><strong>Doa+</strong><nav><a href="login.html">Entrar</a></nav></header>
+  <main>
+    <div class="card estreito">
+      <h2>Criar conta</h2>
+      <form id="form-cadastro">
+        <label for="nome">Nome</label>
+        <input id="nome" required>
+        <label for="email">Email</label>
+        <input id="email" type="email" required>
+        <label for="telefone">Telefone (opcional)</label>
+        <input id="telefone">
+        <label for="senha">Senha (mínimo 6 caracteres)</label>
+        <input id="senha" type="password" minlength="6" required>
+        <label for="perfil">Eu sou</label>
+        <select id="perfil">
+          <option value="doador">Doador</option>
+          <option value="instituicao">Instituição (requer aprovação)</option>
+        </select>
+        <button type="submit">Cadastrar</button>
+      </form>
+      <div id="msg" class="msg"></div>
+    </div>
+  </main>
   <script src="../js/api.js"></script>
+  <script>
+    const form = document.getElementById('form-cadastro');
+    const msg = document.getElementById('msg');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        const dados = await requisicao('/auth/cadastro', {
+          method: 'POST',
+          body: JSON.stringify({
+            nome: document.getElementById('nome').value,
+            email: document.getElementById('email').value,
+            telefone: document.getElementById('telefone').value,
+            senha: document.getElementById('senha').value,
+            perfil: document.getElementById('perfil').value
+          })
+        });
+        mostrarMensagem(msg, dados.mensagem, 'ok');
+        form.reset();
+      } catch (erro) {
+        mostrarMensagem(msg, erro.message, 'erro');
+      }
+    });
+  </script>
 </body>
 </html>

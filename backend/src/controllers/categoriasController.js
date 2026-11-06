@@ -1,1 +1,1 @@
-// Controller de categorias: regras de negócio e respostas HTTP (Entrega 2/3).
+// Controller de categorias: será implementado na Entrega 3.

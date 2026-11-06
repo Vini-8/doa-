@@ -3,11 +3,87 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Doa+ - dashboard</title>
+  <title>Doa+ - Painel</title>
   <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
-  <!-- Página "dashboard": será construída nas próximas entregas -->
+  <header>
+    <strong>Doa+</strong>
+    <nav><span id="saudacao"></span><a href="#" id="btn-sair">Sair</a></nav>
+  </header>
+  <main>
+    <div class="card">
+      <h2 id="titulo">Painel</h2>
+      <p id="descricao"></p>
+    </div>
+
+    <!-- Visível apenas para admin (a API também bloqueia os demais perfis) -->
+    <div class="card" id="area-admin" style="display:none">
+      <h3>Usuários</h3>
+      <table>
+        <thead><tr><th>Nome</th><th>Email</th><th>Perfil</th><th>Status</th><th>Ação</th></tr></thead>
+        <tbody id="tabela-usuarios"></tbody>
+      </table>
+      <div id="msg" class="msg"></div>
+    </div>
+  </main>
   <script src="../js/api.js"></script>
+  <script>
+    const usuario = pegarUsuario();
+    if (!pegarToken() || !usuario) { window.location.href = '/pages/login.html'; }
+
+    document.getElementById('btn-sair').addEventListener('click', (e) => { e.preventDefault(); sair(); });
+    document.getElementById('saudacao').textContent = usuario.nome + ' (' + usuario.perfil + ')';
+
+    const descricoes = {
+      admin: 'Você pode aprovar instituições e bloquear ou reativar usuários.',
+      doador: 'Em breve: publique suas doações de alimentos (Entrega 3).',
+      instituicao: 'Em breve: consulte e reserve doações disponíveis (Entrega 3).'
+    };
+    document.getElementById('descricao').textContent = descricoes[usuario.perfil];
+
+    async function carregarUsuarios() {
+      const tbody = document.getElementById('tabela-usuarios');
+      try {
+        const lista = await requisicao('/usuarios');
+        tbody.innerHTML = '';
+        lista.forEach((u) => {
+          const tr = document.createElement('tr');
+          [u.nome, u.email, u.perfil, u.status].forEach((texto) => {
+            const td = document.createElement('td');
+            td.textContent = texto;
+            tr.appendChild(td);
+          });
+          const tdAcao = document.createElement('td');
+          if (u.perfil !== 'admin') {
+            const btn = document.createElement('button');
+            btn.className = 'secundario';
+            const novo = u.status === 'ativo' ? 'bloqueado' : 'ativo';
+            btn.textContent = u.status === 'ativo' ? 'Bloquear' : (u.status === 'pendente' ? 'Aprovar' : 'Reativar');
+            btn.addEventListener('click', () => alterarStatus(u.id, novo));
+            tdAcao.appendChild(btn);
+          }
+          tr.appendChild(tdAcao);
+          tbody.appendChild(tr);
+        });
+      } catch (erro) {
+        mostrarMensagem(document.getElementById('msg'), erro.message, 'erro');
+      }
+    }
+
+    async function alterarStatus(id, status) {
+      try {
+        await requisicao('/usuarios/' + id + '/status', { method: 'PATCH', body: JSON.stringify({ status }) });
+        carregarUsuarios();
+      } catch (erro) {
+        mostrarMensagem(document.getElementById('msg'), erro.message, 'erro');
+      }
+    }
+
+    if (usuario.perfil === 'admin') {
+      document.getElementById('area-admin').style.display = 'block';
+      carregarUsuarios();
+    }
+  </script>
 </body>
 </html>
