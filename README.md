@@ -3,7 +3,7 @@
 Sistema web que conecta **doadores de alimentos** (mercados, padarias, restaurantes e pessoas físicas) a **instituições que atendem pessoas em situação de vulnerabilidade** (bancos de alimentos, abrigos, ONGs, cozinhas comunitárias).
 
 > Projeto Web — desenvolvido em 4 entregas progressivas neste único repositório.
-> **Situação atual: Entrega 2 — Banco de dados e autenticação.**
+> **Situação atual: Entrega 3 — CRUD completo, integração e permissões.**
 
 ---
 
@@ -104,7 +104,7 @@ doamais/
 ├── frontend/
 │   ├── css/
 │   ├── js/                 # api.js: Fetch e sessão
-│   └── pages/              # index, cadastro, login, dashboard
+│   └── pages/              # index, cadastro, login, dashboard, doacoes
 ├── sql/
 │   └── schema.sql          # Script do banco
 ├── docs/                   # Modelo do banco e testes da API
@@ -124,7 +124,7 @@ Tabelas: `perfis`, `usuarios`, `categorias`, `doacoes` e `reservas`, com chaves 
 - **`roleMiddleware`:** `permitir('admin')` restringe rotas por perfil, sempre verificado na API.
 - **Cadastro público:** só cria `doador` (ativo) ou `instituicao` (pendente até aprovação do admin). O perfil `admin` não pode ser criado pelo cadastro.
 
-## 9. Rotas da API (Entrega 2)
+## 9. Rotas da API
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
@@ -133,6 +133,40 @@ Tabelas: `perfis`, `usuarios`, `categorias`, `doacoes` e `reservas`, com chaves 
 | GET | `/api/auth/me` | Autenticado | Dados do usuário logado |
 | GET | `/api/usuarios` | Admin | Lista usuários (filtros `?status=` e `?perfil=`) |
 | PATCH | `/api/usuarios/:id/status` | Admin | Aprova, bloqueia ou reativa um usuário |
+| GET | `/api/categorias` | Logado | Lista categorias |
+| POST / PUT / DELETE | `/api/categorias[/:id]` | Admin | Gerencia categorias (não exclui categoria em uso) |
+| **POST** | `/api/doacoes` | Doador | **Create** — cadastra doação |
+| **GET** | `/api/doacoes` | Logado | **Read** — lista (filtros `?busca=`, `?categoria_id=`, `?status=`), já filtrada por perfil |
+| **GET** | `/api/doacoes/:id` | Logado | **Read** — detalhe da doação |
+| **PUT** | `/api/doacoes/:id` | Doador (dono) | **Update** — só enquanto `disponivel` |
+| **DELETE** | `/api/doacoes/:id` | Doador (dono) ou Admin | **Delete** — doador só se `disponivel`; admin modera qualquer uma |
+| POST | `/api/doacoes/:id/reserva` | Instituição | Reserva a doação |
+| DELETE | `/api/doacoes/:id/reserva` | Instituição (dona da reserva) | Cancela a reserva |
+| PATCH | `/api/doacoes/:id/concluir` | Doador (dono) | Conclui doação reservada |
+| GET | `/api/doacoes/resumo` | Logado | Totais por status (conforme o perfil) |
+
+### Permissões por perfil (verificadas na API)
+
+| Ação | Doador | Instituição | Admin |
+|---|:-:|:-:|:-:|
+| Cadastrar doação | ✅ | ❌ | ❌ |
+| Ver doações | só as suas | disponíveis e as que reservou | todas |
+| Editar doação | só as suas | ❌ | ❌ |
+| Excluir doação | só as suas (disponíveis) | ❌ | ✅ (moderação) |
+| Reservar / cancelar reserva | ❌ | ✅ | ❌ |
+| Concluir doação | só as suas | ❌ | ❌ |
+| Gerenciar usuários e categorias | ❌ | ❌ | ✅ |
+
+> Os botões também são escondidos no front-end, mas isso é só conveniência: cada rota confere o token, o perfil e a propriedade do registro.
+
+### Regras de negócio implementadas
+
+- Alimento com validade vencida não pode ser cadastrado nem reservado, e doações vencidas deixam de aparecer para as instituições.
+- Quantidade deve ser maior que zero; título, categoria, unidade, local e data (AAAA-MM-DD) são validados no back-end.
+- Uma doação só pode ter **uma** reserva por vez: a reserva usa transação com `SELECT ... FOR UPDATE`, então duas instituições não reservam a mesma doação ao mesmo tempo.
+- Instituições só acessam o sistema depois de aprovadas pelo administrador.
+- Fluxo de status: `disponivel` → `reservada` → `concluida`. Cancelar a reserva devolve a doação para `disponivel`.
+- Doação reservada não pode ser editada nem excluída pelo doador.
 
 ## 10. Como executar
 
@@ -161,13 +195,13 @@ Acesse **http://localhost:3000**. O próprio Express serve o front-end.
 
 ## 11. Testes
 
-Cenários de teste com `curl` e checklist de resultados em [`docs/testes-api.md`](docs/testes-api.md).
+Cenários de teste com `curl` e checklist de resultados (Entregas 2 e 3) em [`docs/testes-api.md`](docs/testes-api.md).
 
 ## 12. Cronograma das entregas
 
 | Entrega | Foco | Status |
 |---|---|---|
 | 1 | Problema, proposta e estrutura inicial | ✅ Concluída |
-| 2 | Banco de dados, autenticação e JWT | ✅ Atual |
-| 3 | CRUD, integração e permissões | ⏳ Prevista |
+| 2 | Banco de dados, autenticação e JWT | ✅ Concluída |
+| 3 | CRUD, integração e permissões | ✅ Atual |
 | 4 | Projeto completo, documentação e apresentação | ⏳ Prevista |

@@ -30,3 +30,20 @@ function mostrarMensagem(elemento, texto, tipo) {
   elemento.textContent = texto;
   elemento.className = 'msg ' + tipo;
 }
+
+// ---- Utilidades compartilhadas pelas páginas internas ----
+function exigirLogin() {
+  if (!pegarToken() || !pegarUsuario()) window.location.href = '/pages/login.html';
+}
+
+function formatarData(texto) {            // "2026-11-20" -> "20/11/2026"
+  if (!texto) return '';
+  const [ano, mes, dia] = texto.slice(0, 10).split('-');
+  return `${dia}/${mes}/${ano}`;
+}
+
+function montarCabecalho() {
+  const u = pegarUsuario();
+  document.getElementById('saudacao').textContent = `${u.nome} (${u.perfil})`;
+  document.getElementById('btn-sair').addEventListener('click', (e) => { e.preventDefault(); sair(); });
+}

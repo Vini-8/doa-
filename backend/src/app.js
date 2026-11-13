@@ -5,6 +5,8 @@ const cors = require('cors');
 
 const authRoutes = require('./routes/authRoutes');
 const usuariosRoutes = require('./routes/usuariosRoutes');
+const doacoesRoutes = require('./routes/doacoesRoutes');
+const categoriasRoutes = require('./routes/categoriasRoutes');
 const { rotaNaoEncontrada, tratarErros } = require('./middlewares/errorHandler');
 
 const app = express();
@@ -18,6 +20,8 @@ app.get('/', (req, res) => res.redirect('/pages/index.html'));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/usuarios', usuariosRoutes);
+app.use('/api/doacoes', doacoesRoutes);
+app.use('/api/categorias', categoriasRoutes);
 
 app.use('/api', rotaNaoEncontrada);
 app.use(tratarErros);
