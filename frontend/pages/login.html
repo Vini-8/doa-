@@ -23,6 +23,13 @@
   </main>
   <script src="../js/api.js"></script>
   <script>
+    const avisos = {
+      expirada: 'Sua sessão expirou. Entre novamente.',
+      bloqueada: 'Seu acesso não está mais ativo. Fale com o administrador.'
+    };
+    const aviso = new URLSearchParams(window.location.search).get('aviso');
+    if (avisos[aviso]) mostrarMensagem(document.getElementById('msg'), avisos[aviso], 'erro');
+
     document.getElementById('form-login').addEventListener('submit', async (e) => {
       e.preventDefault();
       try {

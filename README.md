@@ -3,7 +3,8 @@
 Sistema web que conecta **doadores de alimentos** (mercados, padarias, restaurantes e pessoas físicas) a **instituições que atendem pessoas em situação de vulnerabilidade** (bancos de alimentos, abrigos, ONGs, cozinhas comunitárias).
 
 > Projeto Web — desenvolvido em 4 entregas progressivas neste único repositório.
-> **Situação atual: Entrega 2 — Banco de dados e autenticação.**
+> Autor: _seu nome aqui_
+> **Situação atual: Entrega 4 — Projeto completo.**
 
 ---
 
@@ -47,6 +48,8 @@ Uma plataforma em que doadores **publicam** alimentos disponíveis, instituiçõ
 - Filtros por categoria, status e validade.
 - Painel com resumo (doações ativas, reservadas e concluídas).
 - Aprovação de cadastros de instituições pelo administrador.
+- Cancelamento de doações (por exemplo, quando o alimento estraga), liberando a reserva.
+- Contato (telefone) liberado entre doador e instituição **somente depois da reserva**, para combinar a retirada com privacidade.
 
 ### Regras de negócio previstas
 - Doação com data de validade vencida não pode ser publicada nem reservada.
@@ -54,6 +57,7 @@ Uma plataforma em que doadores **publicam** alimentos disponíveis, instituiçõ
 - Somente o doador dono da doação pode editá-la ou excluí-la, e apenas se ainda estiver `disponivel`.
 - Instituições só podem reservar após aprovação do administrador.
 - Status da doação: `disponivel` → `reservada` → `concluida` (ou `cancelada`).
+- O telefone do doador só é exibido à instituição que reservou (e vice-versa).
 - Quantidade informada deve ser maior que zero.
 
 ## 3. Tipos de usuário e ações
@@ -81,10 +85,11 @@ Cadastro → Login (JWT) → Doador publica → Instituição reserva → Retira
 
 ## 5. Tecnologias
 
-- **Front-end:** HTML, CSS e JavaScript (DOM + Fetch)
+- **Front-end:** HTML, CSS e JavaScript puro (manipulação do DOM + Fetch API)
 - **Back-end:** Node.js e Express
 - **Banco de dados:** MySQL (driver `mysql2`)
-- **Autenticação:** JWT (`jsonwebtoken`) e criptografia de senha (`bcryptjs`)
+- **Autenticação:** JWT (`jsonwebtoken`) e hash de senha (`bcryptjs`)
+- **Testes:** runner nativo do Node (`node:test`)
 - **Versionamento:** Git e GitHub
 
 ## 6. Estrutura do projeto
@@ -93,24 +98,27 @@ Cadastro → Login (JWT) → Doador publica → Instituição reserva → Retira
 doamais/
 ├── backend/
 │   ├── src/
-│   │   ├── routes/         # Define os endpoints
-│   │   ├── controllers/    # Regras de negócio e respostas
-│   │   ├── middlewares/    # Autenticação, autorização e erros
-│   │   ├── database/       # Conexão com o MySQL e seed do admin
-│   │   ├── app.js
-│   │   └── server.js
-│   ├── .env.example
+│   │   ├── routes/         # Define os endpoints e as permissões de cada rota
+│   │   ├── controllers/    # Regras de negócio, validações e respostas
+│   │   ├── middlewares/    # Autenticação (JWT), autorização por perfil e erros
+│   │   ├── database/       # Conexão com o MySQL, seed do admin e dados de demonstração
+│   │   ├── app.js          # Configuração do Express
+│   │   └── server.js       # Inicialização do servidor
+│   ├── tests/              # Testes automatizados da API
+│   ├── .env.example        # Modelo das variáveis de ambiente
 │   └── package.json
 ├── frontend/
-│   ├── css/
-│   ├── js/                 # api.js: Fetch e sessão
-│   └── pages/              # index, cadastro, login, dashboard
+│   ├── css/style.css
+│   ├── js/                 # api.js (Fetch e sessão), dashboard.js, doacoes.js
+│   └── pages/              # index, cadastro, login, dashboard, doacoes, 404
 ├── sql/
-│   └── schema.sql          # Script do banco
-├── docs/                   # Modelo do banco e testes da API
+│   └── schema.sql          # Script do banco de dados
+├── docs/                   # Modelo do banco e roteiro de testes
 ├── .gitignore
 └── README.md
 ```
+
+**Arquitetura em camadas:** `routes` recebem a requisição e aplicam os middlewares → `controllers` validam e executam a regra de negócio → `database` executa o SQL. O front-end conversa com a API apenas por Fetch (JSON).
 
 ## 7. Banco de dados
 
@@ -119,22 +127,65 @@ Tabelas: `perfis`, `usuarios`, `categorias`, `doacoes` e `reservas`, com chaves 
 ## 8. Autenticação e controle de acesso
 
 - **Senhas:** nunca salvas em texto puro; armazenadas como hash bcrypt (10 rounds).
-- **Login:** valida email e senha e devolve um token JWT (expira em 2h) com `id` e `perfil`.
+- **Login:** valida email e senha e devolve um token JWT (expira em 2h) com `id` e `perfil`. A mensagem de erro é a mesma para email ou senha incorretos.
 - **`authMiddleware`:** valida o token do header `Authorization: Bearer <token>` e confere no banco se o usuário continua `ativo` (um usuário bloqueado perde o acesso imediatamente, mesmo com token válido).
-- **`roleMiddleware`:** `permitir('admin')` restringe rotas por perfil, sempre verificado na API.
+- **`roleMiddleware`:** `permitir('admin')` restringe rotas por perfil.
 - **Cadastro público:** só cria `doador` (ativo) ou `instituicao` (pendente até aprovação do admin). O perfil `admin` não pode ser criado pelo cadastro.
+- **Propriedade dos dados:** além do perfil, cada controller confere se o registro pertence ao usuário (ex.: um doador só edita as suas doações).
 
-## 9. Rotas da API (Entrega 2)
+## 9. Rotas da API
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
 | POST | `/api/auth/cadastro` | Público | Cadastra doador ou instituição |
 | POST | `/api/auth/login` | Público | Autentica e retorna o token JWT |
-| GET | `/api/auth/me` | Autenticado | Dados do usuário logado |
+| GET | `/api/auth/me` | Logado | Dados do usuário logado |
 | GET | `/api/usuarios` | Admin | Lista usuários (filtros `?status=` e `?perfil=`) |
 | PATCH | `/api/usuarios/:id/status` | Admin | Aprova, bloqueia ou reativa um usuário |
+| GET | `/api/categorias` | Logado | Lista categorias |
+| POST / PUT / DELETE | `/api/categorias[/:id]` | Admin | Gerencia categorias (não exclui categoria em uso) |
+| **POST** | `/api/doacoes` | Doador | **Create** — cadastra doação |
+| **GET** | `/api/doacoes` | Logado | **Read** — lista (filtros `?busca=`, `?categoria_id=`, `?status=`), já filtrada por perfil |
+| **GET** | `/api/doacoes/:id` | Logado | **Read** — detalhe da doação |
+| **PUT** | `/api/doacoes/:id` | Doador (dono) | **Update** — só enquanto `disponivel` |
+| **DELETE** | `/api/doacoes/:id` | Doador (dono) ou Admin | **Delete** — doador só se `disponivel`; admin modera qualquer uma |
+| POST | `/api/doacoes/:id/reserva` | Instituição | Reserva a doação |
+| DELETE | `/api/doacoes/:id/reserva` | Instituição (dona da reserva) | Cancela a reserva |
+| PATCH | `/api/doacoes/:id/concluir` | Doador (dono) | Conclui doação reservada |
+| PATCH | `/api/doacoes/:id/cancelar` | Doador (dono) ou Admin | Cancela doação disponível ou reservada |
+| GET | `/api/doacoes/resumo` | Logado | Totais por status (conforme o perfil) |
 
-## 10. Como executar
+### Permissões por perfil (verificadas na API)
+
+| Ação | Doador | Instituição | Admin |
+|---|:-:|:-:|:-:|
+| Cadastrar doação | ✅ | ❌ | ❌ |
+| Ver doações | só as suas | disponíveis e as que reservou | todas |
+| Editar doação | só as suas | ❌ | ❌ |
+| Excluir doação | só as suas (disponíveis) | ❌ | ✅ (moderação) |
+| Cancelar doação | só as suas | ❌ | ✅ |
+| Reservar / cancelar reserva | ❌ | ✅ | ❌ |
+| Concluir doação | só as suas | ❌ | ❌ |
+| Gerenciar usuários e categorias | ❌ | ❌ | ✅ |
+
+> Os botões também são escondidos no front-end, mas isso é só conveniência: cada rota confere o token, o perfil e a propriedade do registro.
+
+### Regras de negócio implementadas
+
+- Alimento com validade vencida não pode ser cadastrado nem reservado, e doações vencidas deixam de aparecer para as instituições.
+- Quantidade deve ser maior que zero; título, categoria, unidade, local e data (AAAA-MM-DD) são validados no back-end.
+- Uma doação só pode ter **uma** reserva por vez: a reserva usa transação com `SELECT ... FOR UPDATE`, então duas instituições não reservam a mesma doação ao mesmo tempo.
+- Instituições só acessam o sistema depois de aprovadas pelo administrador.
+- Fluxo de status: `disponivel` → `reservada` → `concluida`; `cancelada` a partir de disponível ou reservada. Cancelar a reserva devolve a doação para `disponivel`.
+- Doação reservada não pode ser editada nem excluída pelo doador (apenas concluída ou cancelada).
+- Telefones só são enviados pela API a quem participa da reserva (e ao admin).
+
+## 10. Tratamento de erros
+
+- **API:** respostas JSON padronizadas `{ "erro": "mensagem" }` com códigos adequados: 400 (validação), 401 (sem token ou token inválido), 403 (sem permissão), 404 (não encontrado), 409 (conflito de regra de negócio) e 500 (erro interno, sem expor detalhes). JSON malformado e IDs inválidos também são tratados.
+- **Front-end:** mensagens da API são exibidas ao usuário; servidor fora do ar mostra aviso claro; sessão expirada ou conta bloqueada redireciona ao login com aviso; páginas inexistentes mostram a tela 404.
+
+## 11. Como instalar e executar
 
 **Pré-requisitos:** Node.js 18+ e MySQL 8+.
 
@@ -153,21 +204,59 @@ cp .env.example .env
 # 4. Criar o usuário administrador (usa ADMIN_* do .env)
 npm run seed:admin
 
-# 5. Iniciar o servidor
+# 5. (Opcional) Dados de demonstração
+npm run seed:demo
+
+# 6. Iniciar o servidor
 npm start
 ```
 
 Acesse **http://localhost:3000**. O próprio Express serve o front-end.
 
-## 11. Testes
+### Contas de demonstração (após `npm run seed:demo`)
 
-Cenários de teste com `curl` e checklist de resultados em [`docs/testes-api.md`](docs/testes-api.md).
+| Perfil | Email | Senha |
+|---|---|---|
+| Admin | valor de `ADMIN_EMAIL` no `.env` | valor de `ADMIN_SENHA` |
+| Doador | `doador@demo.com` / `mercado@demo.com` | `demo123` |
+| Instituição | `instituicao@demo.com` / `abrigo@demo.com` | `demo123` |
 
-## 12. Cronograma das entregas
+> Use as contas de demonstração apenas em ambiente de desenvolvimento.
+
+## 12. Como testar
+
+**Testes automatizados** (com o servidor rodando e o admin criado):
+
+```bash
+cd backend
+npm test
+```
+
+Cobrem autenticação, validações, CRUD, permissões, reservas concorrentes, contatos, cancelamento, bloqueio de usuário e tratamento de erros. Os testes criam usuários com emails únicos, então podem ser repetidos sem limpar o banco.
+
+**Roteiro manual** (sugestão para demonstração):
+1. Cadastre uma instituição em `/pages/cadastro.html` e tente entrar (fica pendente).
+2. Entre como admin e aprove a instituição no painel.
+3. Entre como doador, publique uma doação e veja que ela aparece só para você e para as instituições.
+4. Entre como instituição, reserve a doação e veja o contato do doador.
+5. Volte ao doador: veja o contato da instituição e marque como concluída (ou cancele).
+6. Tente, via `curl` ou Postman, acessar uma rota de outro perfil e confira o 403.
+
+Comandos `curl` e o checklist completo em [`docs/testes-api.md`](docs/testes-api.md).
+
+## 13. Melhorias futuras
+
+- Notificações por email quando uma doação é reservada.
+- Paginação nas listagens e relatórios para o administrador.
+- Upload de fotos dos alimentos.
+- Limite de tentativas de login e renovação de token.
+- Deploy em servidor com HTTPS.
+
+## 14. Cronograma das entregas
 
 | Entrega | Foco | Status |
 |---|---|---|
 | 1 | Problema, proposta e estrutura inicial | ✅ Concluída |
-| 2 | Banco de dados, autenticação e JWT | ✅ Atual |
-| 3 | CRUD, integração e permissões | ⏳ Prevista |
-| 4 | Projeto completo, documentação e apresentação | ⏳ Prevista |
+| 2 | Banco de dados, autenticação e JWT | ✅ Concluída |
+| 3 | CRUD, integração e permissões | ✅ Concluída |
+| 4 | Projeto completo, documentação e apresentação | ✅ Atual |

@@ -8,7 +8,9 @@ const pool = mysql.createPool({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   waitForConnections: true,
-  connectionLimit: 10
+  connectionLimit: 10,
+  dateStrings: true,     // DATE/TIMESTAMP chegam como texto (sem problema de fuso horário)
+  decimalNumbers: true   // DECIMAL chega como número
 });
 
 module.exports = pool;
